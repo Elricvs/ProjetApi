@@ -1,0 +1,74 @@
+﻿@page "/"
+@using ProjetApi.Data
+@inject IJSRuntime JS
+@using System.Text.Json
+
+<PageTitle>Home</PageTitle>
+
+<h1>La bonne blague</h1>
+
+@if (api.CurrentJoke != null)
+{
+    <!-- Affichage de la blague actuelle si elle existe -->
+    <p>@api.CurrentJoke.Setup</p>
+    <p>@api.CurrentJoke.Delivery</p>
+}
+
+<!-- Bouton pour récupérer une nouvelle blague -->
+<button @onclick="GetJoke">Afficher une blague</button>
+<!-- Bouton pour ajouter la blague actuelle aux favoris -->
+<button @onclick="AddFavorite">Ajouter aux favoris</button>
+
+@if (api.Favs != null)
+{
+    <!-- Affichage des blagues favorites -->
+    <h1>Favoris</h1>
+
+    @foreach (var joke in api.Favs)
+    {
+        <p>@joke.Setup</p>
+        <p>@joke.Delivery</p>
+    }
+}
+
+@code {
+    // Instance de JokeApi pour la gestion des blagues
+    JokeApi api = new JokeApi();
+
+    // Méthode appelée lors de l'initialisation de la page
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        // Chargement des favoris sauvegardés
+        await GetSaving();
+    }
+
+    // Méthode pour récupérer une nouvelle blague
+    private void GetJoke()
+    {
+        api.GetJoke();
+    }
+
+    // Méthode pour ajouter la blague actuelle aux favoris
+    private async Task AddFavorite()
+    {
+        api.AddFav();
+        // Sérialisation des favoris en JSON et sauvegarde dans le stockage local
+        var json = JsonSerializer.Serialize(api.Favs);
+        await JS.InvokeVoidAsync("localStorage.setItem", "JokeFavorite", json);
+    }
+
+    // Méthode pour récupérer les favoris sauvegardés
+    async Task GetSaving()
+    {
+        // Récupération des favoris depuis le stockage local
+        var value = await JS.InvokeAsync<string>("localStorage.getItem", "JokeFavorite");
+        if (value != null)
+        {
+            // Désérialisation des favoris et assignation à la liste des favoris
+            List<Joke> savings = JsonSerializer.Deserialize<List<Joke>>(value);
+            api.Favs = savings;
+        }
+    }
+}
